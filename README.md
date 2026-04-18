@@ -1,47 +1,51 @@
 # course-note-organizer
 
-A configurable, traceable course-note skill for turning lecture videos, Canvas pages, slide decks, captions, OCR, and related class materials into study-ready notes.
+一个可配置、可追溯、可集成的课程笔记 Skill，用于把网课视频、Canvas 页面、PPT、字幕、OCR 内容和相关课程材料整理成适合复习的课堂笔记。
 
-This skill is designed for Codex-style agent workflows where the agent needs to:
+这个 Skill 面向 Codex / Agent 工作流，重点解决的是“课堂内容整理”而不是“泛化总结”。它强调：
 
-- preserve real lecture order
-- generate a timestamped topic index
-- optionally use Canvas announcements and assignments as course context
-- repair OCR or subtitle gaps conservatively
-- ask before transcription, upload, download, or cleanup
-- export final notes to Markdown, Word, or PDF
-- emit structured JSON metadata for downstream tools such as NotebookLM, flashcard generators, and exam-prep agents
+- 保留真实授课顺序
+- 在笔记开头生成时间戳知识点索引表
+- 可选引入 Canvas 公告、作业、模块信息作为课程上下文
+- 对 OCR 模糊、字幕断层做保守修补
+- 在下载、转写、上传、清理中间文件前先征求用户确认
+- 输出可继续流转给 NotebookLM、闪卡生成器、考试预测 Agent 的结构化结果
 
-## What This Skill Produces
+## 这个 Skill 会产出什么
 
-The default output is a Markdown master note package that includes:
+默认情况下，它会先生成一个 Markdown 主稿，内容固定包含：
 
-1. lesson title and identification
-2. a timestamped topic index table
-3. an optional Canvas context section
-4. lecture-order notes
-5. a structured lesson summary
-6. a visible JSON metadata block
+1. 课程/本讲标题
+2. 时间戳知识点索引表
+3. 可选的 Canvas 课程上下文提示
+4. 按真实授课顺序展开的课堂笔记正文
+5. 本堂课总结
+6. 可见 JSON 元数据代码块
 
-If requested, the Markdown master copy can also be exported to `.docx` and `.pdf`.
+如果用户要求，还可以在 Markdown 主稿基础上继续导出：
 
-## Key Features
+- `.docx`
+- `.pdf`
 
-- Canvas-aware note generation with safe downgrade behavior
-- Timestamped topic index for fast lecture review and navigation
-- Multiple note-style presets
-- Local or hosted transcription paths
-- Explicit source traceability for video, Canvas, and transcript-assisted repair
-- Standardized command schemas and error manifests
-- Standardized response templates for login, upload, extraction, and dependency boundaries
-- Privacy-first workflow with read-only defaults and explicit user consent before risky actions
+## 核心能力
 
-## Repository Layout
+- 基于授课顺序整理课堂笔记
+- 生成可回查的时间戳索引
+- 按规则引入 Canvas 公告、作业、周次、模块等上下文
+- 支持多种笔记风格模板
+- 支持字幕归一化、本地 Whisper 转写、远程 API 转写
+- 支持 Markdown、Word、PDF 三种交付方式
+- 文末输出结构化 JSON 元数据
+- 明确标记内容来源：视频、Canvas、转录补全
+- 通过统一 schema、错误模型、回复模板提升 Agent 使用稳定性
+
+## 目录结构
 
 ```text
 course-note-organizer/
 |-- SKILL.md
 |-- README.md
+|-- README.zh-CN.md
 |-- agents/
 |   `-- openai.yaml
 |-- references/
@@ -77,89 +81,104 @@ course-note-organizer/
         `-- _schemas.py
 ```
 
-## Command Overview
+## 命令层概览
 
-| Command | Purpose |
+| 命令 | 作用 |
 |---|---|
-| `inspect_canvas_context.py` | Parse local Canvas exports, copied content, or snapshots into structured course context |
-| `extract_canvas_audio.py` | Prepare audio from a local media file or directly accessible media URL |
-| `transcribe_audio.py` | Normalize captions or run local Whisper when available |
-| `transcribe_via_openai.py` | Hosted transcription through OpenAI Audio Transcriptions API |
-| `transcribe_via_assemblyai.py` | Hosted transcription through AssemblyAI |
-| `transcribe_via_deepgram.py` | Hosted transcription through Deepgram |
-| `assemble_notes.py` | Build the Markdown master note package from structured note JSON |
-| `export_docx.py` | Export Markdown notes to Word |
-| `export_pdf.py` | Export Markdown notes to PDF |
-| `cleanup_artifacts.py` | Preview or delete course-local temporary artifacts after confirmation |
-| `orchestrate_course_notes.py` | Run the assembly and export flow through one stable entry point |
+| `inspect_canvas_context.py` | 解析本地 Canvas 导出文件、复制文本或快照，生成结构化课程上下文 |
+| `extract_canvas_audio.py` | 从本地媒体文件或可直接访问的媒体 URL 准备音频 |
+| `transcribe_audio.py` | 归一化字幕文件，或在本地 Whisper 可用时执行本地转写 |
+| `transcribe_via_openai.py` | 通过 OpenAI Audio Transcriptions API 执行远程转写 |
+| `transcribe_via_assemblyai.py` | 通过 AssemblyAI 执行远程转写 |
+| `transcribe_via_deepgram.py` | 通过 Deepgram 执行远程转写 |
+| `assemble_notes.py` | 根据结构化笔记 JSON 生成 Markdown 主稿 |
+| `export_docx.py` | 将 Markdown 笔记导出为 Word |
+| `export_pdf.py` | 将 Markdown 笔记导出为 PDF |
+| `cleanup_artifacts.py` | 预览或删除课程目录下的临时文件 |
+| `orchestrate_course_notes.py` | 统一调度组装和导出流程的主入口 |
 
-## Rule System
+## 规则层设计
 
-This skill separates runtime actions from decision rules.
+这个 Skill 把“执行动作”和“决策规则”拆开了：
 
 - `SKILL.md`
-  - high-level skill entry point, workflow, and trigger behavior
+  - 定义 Skill 的目标、入口流程、调用时机
 - `scripts/commands/`
-  - task-focused executable commands
+  - 放可执行命令
 - `references/rules/`
-  - intake rules, formatting rules, safety rules, fallback logic, error handling, and response templates
+  - 放 intake、格式、边界、安全、错误码、回复模板等规则
 
-Important rule files:
+其中几份最关键的规则文件是：
 
 - `capability-boundaries.md`
-  - what the skill can and cannot do
+  - 定义 Skill 能做什么、不能做什么
 - `error-codes.md`
-  - standard error codes and default recovery mapping
+  - 定义统一错误码以及默认恢复动作
 - `agent-response-templates.md`
-  - standardized user-facing wording for boundaries and consent requests
+  - 定义遇到登录边界、上传确认、抓取失败等情况时的标准回复模板
 - `security.md`
-  - privacy, permissions, and storage rules
+  - 定义权限、隐私、文件落地与敏感信息处理规则
 
-## Safety Model
+## 输入来源
 
-This skill is intentionally conservative.
+这个 Skill 适合处理以下来源的课程材料：
 
-- It uses only the user's own logged-in browser session for live Canvas access.
-- It never asks for passwords.
-- It never stores credentials, cookies, or tokens in the skill files.
-- It defaults to read-only behavior.
-- It asks before download, transcription, batch capture, upload, or cleanup.
-- It does not silently blend uncertain reconstructions into the main notes.
+- 课堂视频
+- Canvas 课程主页、公告、作业、模块信息
+- PPT 或课件截图
+- 手写板书截图
+- `.srt` / `.vtt` 字幕文件
+- OCR 提取文本
+- 教材节选或补充学习材料
 
-## Transcription Modes
+## 转写模式
 
-The skill supports three transcription paths:
+目前支持三种转写路径：
 
-1. Captions only
-   - Best when `.srt` or `.vtt` already exist
-2. Local Whisper
-   - Keeps audio on-device
-   - May require local dependency installation
-3. Hosted APIs
+1. 只使用现有字幕
+   - 最省依赖
+   - 不需要本地模型，也不需要上传音频
+2. 本地 Whisper
+   - 音频留在本机
+   - 适合注重隐私的场景
+   - 可能需要安装 Python / 音频相关依赖
+3. 远程 API 转写
    - OpenAI
    - AssemblyAI
    - Deepgram
-   - Requires explicit user approval before upload
+   - 发送音频前必须先征得用户明确同意
 
-## Default Artifact Layout
+## 默认输出目录结构
 
-When no output directory is specified, the skill creates a course folder under the current working directory with:
+当用户没有指定输出目录时，Skill 会在当前工作目录下创建课程文件夹，并使用以下子目录：
 
 - `笔记`
 - `音频`
 - `其他临时文件`
 
-## Error Handling
+## 安全与权限原则
 
-Commands use a shared schema and error model built around:
+这是这个 Skill 最重要的设计部分之一。
 
-- `Pydantic` request validation
-- standardized manifests
-- machine-readable `error.code`
-- structured recovery suggestions
-- default template mappings for common boundary situations
+- 只使用用户自己已登录的浏览器会话访问 Canvas
+- 不要求用户提供密码
+- 不在 Skill 文件中存储账号、密码、cookie、token
+- 默认只读，不执行任何会改动 Canvas 状态的操作
+- 下载、批量抓取、转写、远程上传前先征求用户确认
+- 不把课程私有数据写入长期规则文件
+- 在笔记中明确标注内容来源，避免“无痕混写”
 
-Examples of supported error categories:
+## 错误处理设计
+
+命令层已经统一到一套共享 schema 和错误模型，核心包括：
+
+- `Pydantic` 请求校验
+- 统一 manifest 输出
+- 机器可读的 `error.code`
+- 结构化的恢复建议
+- 错误码到回复模板的默认映射
+
+典型错误类别包括：
 
 - `VALIDATION_ERROR`
 - `MISSING_SOURCE`
@@ -170,48 +189,50 @@ Examples of supported error categories:
 - `TIMEOUT`
 - `EXPORT_FAILED`
 
-## Typical Workflow
+## 典型工作流
 
-1. Gather lecture materials.
-2. Optionally inspect Canvas context if a usable session or export is available.
-3. Run intake to determine note style and export format.
-4. Build the timestamped topic index.
-5. Draft lecture-order notes.
-6. Repair gaps conservatively.
-7. Ask before local install or remote transcription if needed.
-8. Assemble the Markdown master note.
-9. Export to Word or PDF if requested.
-10. Offer cleanup of temporary artifacts.
+1. 收集课程材料
+2. 如果有可用的 Canvas 登录态或导出文件，先做 Canvas preflight
+3. 进行 intake，确认笔记风格、导出格式等配置
+4. 构建时间戳知识点索引表
+5. 按授课顺序整理正文
+6. 对模糊段落做保守修补
+7. 如有必要，询问是否安装本地 Whisper 或使用远程转写
+8. 生成 Markdown 主稿
+9. 如有需要，导出 Word 或 PDF
+10. 询问是否清理音频、文字稿、截图等中间文件
 
-## Best Fit
+## 适合什么场景
 
-This skill is a good fit when you need:
+这个 Skill 特别适合：
 
-- lecture notes that are navigable, not just summarized
-- safer educational workflows with explicit permission boundaries
-- outputs that can feed downstream study systems
-- an agent that can explain failures and propose the next safe step clearly
+- 需要把网课内容整理成可复习笔记
+- 需要快速回找知识点和视频位置
+- 需要把课堂笔记继续交给下游 Agent 处理
+- 需要高安全、低误操作的教育类 Agent 工作流
 
-## Not Designed For
+## 不适合什么场景
 
-This skill is not intended to:
+这个 Skill 不用于：
 
-- bypass Canvas authentication
-- scrape protected video streams without user access
-- perform state-changing actions inside Canvas
-- upload course audio silently
-- store user-private course data in long-lived rule files
+- 绕过 Canvas 认证
+- 强行抓取受保护的视频流
+- 在 Canvas 中执行提交、编辑、删除等状态变更操作
+- 未经确认就把课程音频上传到第三方服务
+- 把用户课程私有内容长期保留在规则文件中
 
-## Status
+## 当前状态
 
-Current architecture includes:
+当前版本已经具备：
 
-- modular command layer
-- split rules layer
-- shared schema and error model
-- capability boundary documentation
-- response-template mapping for common runtime failures
+- 模块化命令层
+- 分层规则系统
+- 统一 schema 与标准错误模型
+- 能力边界表
+- 错误码文档
+- Agent 回复模板
+- 错误码到回复模板的默认映射
 
 ## License
 
-Add your preferred license here before publishing to GitHub.
+上传 GitHub 前，请按你的需要补充许可证文件与说明。
