@@ -1,0 +1,4 @@
+interface:
+  display_name: "Course Note Organizer"
+  short_description: "Build timestamped, traceable course notes from Canvas lectures, slides, and study files."
+  default_prompt: "Use $course-note-organizer to turn this lecture into timestamped notes with a lesson summary and visible JSON metadata."
