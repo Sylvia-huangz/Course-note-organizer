@@ -140,8 +140,9 @@ class NoteSpec(BaseModel):
 class InspectCanvasContextRequest(BaseModel):
     course_title: str
     lesson_title: str | None = None
+    base_dir: str = "."
     input_paths: list[str] = Field(min_length=1)
-    output: str
+    output: str | None = None
 
 
 class ExtractCanvasAudioRequest(BaseModel):

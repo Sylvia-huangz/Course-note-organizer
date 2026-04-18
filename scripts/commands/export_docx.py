@@ -12,6 +12,7 @@ from docx.shared import Inches, Pt
 from PIL import Image, ImageDraw, ImageFont
 from pydantic import ValidationError
 
+from _common import TEMP_DIRNAME, ensure_within_course_root, infer_course_root_from_artifact
 from _errors import write_error_manifest, write_manifest, write_validation_error
 from _markdown_blocks import MarkdownBlock, parse_markdown_blocks
 from _schemas import ExportDocxRequest, ExportDocxResult
@@ -156,33 +157,55 @@ def main() -> int:
         return 1
 
     markdown_path = Path(request.markdown).expanduser().resolve()
-    output_path = Path(request.output).expanduser().resolve()
-    if not markdown_path.exists():
-        if manifest_hint:
+    try:
+        course_root = infer_course_root_from_artifact(markdown_path)
+        manifest_path = ensure_within_course_root(
+            manifest_hint or course_root / TEMP_DIRNAME / f"{markdown_path.stem}.docx-export-status.json",
+            course_root,
+        )
+        output_path = ensure_within_course_root(Path(request.output).expanduser().resolve(), course_root)
+    except ValueError as exc:
+        if "manifest_path" in locals():
+            write_error_manifest(
+                manifest_path,
+                code="OUT_OF_SCOPE_PATH",
+                message="DOCX export expects note artifacts inside a course directory.",
+                source=str(markdown_path),
+                details={"exception": str(exc)},
+            )
+        elif manifest_hint:
             write_error_manifest(
                 manifest_hint,
-                code="MISSING_SOURCE",
-                message="Markdown source file not found for DOCX export.",
+                code="OUT_OF_SCOPE_PATH",
+                message="DOCX export expects note artifacts inside a course directory.",
                 source=str(markdown_path),
+                details={"exception": str(exc)},
             )
+        return 1
+
+    if not markdown_path.exists():
+        write_error_manifest(
+            manifest_path,
+            code="MISSING_SOURCE",
+            message="Markdown source file not found for DOCX export.",
+            source=str(markdown_path),
+        )
         return 1
 
     try:
         result = export_docx(markdown_path, output_path)
     except Exception as exc:
-        if manifest_hint:
-            write_error_manifest(
-                manifest_hint,
-                code="EXPORT_FAILED",
-                message="DOCX export failed before completion.",
-                source=str(markdown_path),
-                details={"exception": str(exc)},
-                retryable=True,
-            )
+        write_error_manifest(
+            manifest_path,
+            code="EXPORT_FAILED",
+            message="DOCX export failed before completion.",
+            source=str(markdown_path),
+            details={"exception": str(exc)},
+            retryable=True,
+        )
         return 1
 
-    if request.manifest:
-        write_manifest(Path(request.manifest).expanduser().resolve(), **result.model_dump())
+    write_manifest(manifest_path, **result.model_dump())
     return 0
 
 

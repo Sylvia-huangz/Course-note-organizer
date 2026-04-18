@@ -8,7 +8,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from _common import TEMP_DIRNAME, ensure_course_dirs, estimate_review_minutes, extract_formulas, slugify
+from _common import TEMP_DIRNAME, ensure_course_dirs, ensure_within_course_root, estimate_review_minutes, extract_formulas, slugify
 from _errors import write_error_manifest, write_manifest, write_validation_error
 from _schemas import AssembleNotesRequest, MetadataSpec, NoteSpec
 
@@ -263,13 +263,18 @@ def main() -> int:
         return 1
 
     spec_path = Path(request.spec).expanduser().resolve()
+    provisional_course_title = request.course_title or spec_path.stem or "course-notes"
+    provisional_dirs = ensure_course_dirs(request.base_dir, provisional_course_title)
+    provisional_manifest_path = ensure_within_course_root(
+        manifest_hint or provisional_dirs["temp"] / "assemble-notes-status.json",
+        provisional_dirs["root"],
+    )
     try:
         raw_spec = json.loads(spec_path.read_text(encoding="utf-8-sig"))
         spec = NoteSpec.model_validate(raw_spec)
     except json.JSONDecodeError as exc:
-        error_path = manifest_hint or Path(request.base_dir).expanduser().resolve() / TEMP_DIRNAME / "assemble-notes-status.json"
         write_error_manifest(
-            error_path,
+            provisional_manifest_path,
             code="INVALID_JSON",
             message="Failed to parse the note spec JSON.",
             source=str(spec_path),
@@ -277,22 +282,28 @@ def main() -> int:
         )
         return 1
     except ValidationError as exc:
-        error_path = manifest_hint or Path(request.base_dir).expanduser().resolve() / TEMP_DIRNAME / "assemble-notes-status.json"
-        write_validation_error(error_path, exc, source=str(spec_path))
+        write_validation_error(provisional_manifest_path, exc, source=str(spec_path))
         return 1
 
     course_title = request.course_title or spec.course_title or "course-notes"
     course_dirs = ensure_course_dirs(request.base_dir, course_title)
-    manifest_path = manifest_hint or course_dirs["temp"] / "assemble-notes-status.json"
+    manifest_path = ensure_within_course_root(
+        manifest_hint or course_dirs["temp"] / "assemble-notes-status.json",
+        course_dirs["root"],
+    )
     style = request.style or spec.note_style or "standard-structured"
     output_path = Path(request.output).expanduser().resolve() if request.output else course_dirs["notes"] / f"{slugify(course_title)}.md"
+    output_path = ensure_within_course_root(output_path, course_dirs["root"])
+    metadata_path = (
+        Path(request.metadata_sidecar).expanduser().resolve()
+        if request.metadata_sidecar
+        else course_dirs["temp"] / f"{slugify(course_title)}.metadata.json"
+    )
+    metadata_path = ensure_within_course_root(metadata_path, course_dirs["root"])
     try:
         markdown, metadata = assemble_markdown(spec, style)
         output_path.write_text(markdown, encoding="utf-8")
-        if request.metadata_sidecar:
-            Path(request.metadata_sidecar).expanduser().resolve().write_text(
-                json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8"
-            )
+        metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception as exc:
         write_error_manifest(
             manifest_path,
@@ -308,6 +319,7 @@ def main() -> int:
         status="ok",
         source=str(spec_path),
         output=str(output_path),
+        metadata_json=str(metadata_path),
         style=style,
         metadata_preview=metadata,
     )

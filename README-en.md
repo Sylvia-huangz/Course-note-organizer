@@ -147,7 +147,9 @@ When no output directory is specified, the skill creates a course folder under t
 
 - `笔记`
 - `音频`
-- `其他临时文件`
+- `临时文件`
+
+All generated JSON files, including metadata sidecars, transcripts, manifests, and other machine-readable artifacts, are stored inside `临时文件`.
 
 ## Error Handling
 

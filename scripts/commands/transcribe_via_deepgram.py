@@ -11,7 +11,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from _common import ensure_course_dirs, looks_like_audio, looks_like_video
+from _common import ensure_course_dirs, ensure_within_course_root, looks_like_audio, looks_like_video
 from _errors import write_error_manifest, write_manifest, write_model, write_validation_error
 from _schemas import DeepgramTranscriptionRequest, TranscriptPayload
 
@@ -97,7 +97,10 @@ def main() -> int:
     temp_dir = course_dirs["temp"]
     source_path = Path(source_value).expanduser().resolve() if not source_value.startswith(("http://", "https://")) else None
     manifest_stem = source_path.stem if source_path else "remote-audio"
-    manifest_path = manifest_hint or temp_dir / f"{manifest_stem}.deepgram-transcription-status.json"
+    manifest_path = ensure_within_course_root(
+        manifest_hint or temp_dir / f"{manifest_stem}.deepgram-transcription-status.json",
+        course_dirs["root"],
+    )
     api_key = os.environ.get(request.api_key_env)
 
     if not api_key:

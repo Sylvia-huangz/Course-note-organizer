@@ -11,7 +11,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from _common import ensure_course_dirs
+from _common import ensure_course_dirs, ensure_within_course_root
 from _errors import write_error_manifest, write_manifest, write_model, write_validation_error
 from _schemas import OpenAITranscriptionRequest, TranscriptPayload
 
@@ -90,7 +90,10 @@ def main() -> int:
     audio_path = Path(request.audio).expanduser().resolve()
     course_dirs = ensure_course_dirs(request.base_dir, request.course_title)
     temp_dir = course_dirs["temp"]
-    manifest_path = manifest_hint or temp_dir / f"{audio_path.stem}.openai-transcription-status.json"
+    manifest_path = ensure_within_course_root(
+        manifest_hint or temp_dir / f"{audio_path.stem}.openai-transcription-status.json",
+        course_dirs["root"],
+    )
     api_key = os.environ.get(request.api_key_env)
 
     if not api_key:

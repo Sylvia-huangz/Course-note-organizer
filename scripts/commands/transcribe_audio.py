@@ -8,7 +8,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from _common import ensure_course_dirs
+from _common import ensure_course_dirs, ensure_within_course_root
 from _errors import write_error_manifest, write_manifest, write_model, write_validation_error
 from _schemas import TranscriptPayload, TranscribeAudioRequest
 
@@ -103,12 +103,18 @@ def main() -> int:
 
     course_dirs = ensure_course_dirs(request.base_dir, request.course_title)
     temp_dir = course_dirs["temp"]
+    default_manifest_path = ensure_within_course_root(
+        manifest_hint or temp_dir / "transcription-status.json",
+        course_dirs["root"],
+    )
 
     if request.caption_file:
         source_path = Path(request.caption_file).expanduser().resolve()
+        manifest_path = default_manifest_path if manifest_hint else temp_dir / f"{source_path.stem}.transcription-status.json"
+        manifest_path = ensure_within_course_root(manifest_path, course_dirs["root"])
         if not source_path.exists():
             write_error_manifest(
-                manifest_hint or temp_dir / "transcription-status.json",
+                manifest_path,
                 code="MISSING_SOURCE",
                 message="Caption source file not found.",
                 source=str(source_path),
@@ -118,7 +124,7 @@ def main() -> int:
             transcript = TranscriptPayload.model_validate(parse_caption_file(source_path))
         except Exception as exc:
             write_error_manifest(
-                manifest_hint or temp_dir / f"{source_path.stem}.transcription-status.json",
+                manifest_path,
                 code="PARSE_FAILED",
                 message="Failed to normalize the caption file.",
                 source=str(source_path),
@@ -129,9 +135,11 @@ def main() -> int:
         status_ok = True
     else:
         source_path = Path(request.audio).expanduser().resolve()
+        manifest_path = default_manifest_path if manifest_hint else temp_dir / f"{source_path.stem}.transcription-status.json"
+        manifest_path = ensure_within_course_root(manifest_path, course_dirs["root"])
         if not source_path.exists():
             write_error_manifest(
-                manifest_hint or temp_dir / "transcription-status.json",
+                manifest_path,
                 code="MISSING_SOURCE",
                 message="Audio source file not found.",
                 source=str(source_path),
@@ -149,7 +157,7 @@ def main() -> int:
                 )
             except Exception as exc:
                 write_error_manifest(
-                    manifest_hint or temp_dir / f"{source_path.stem}.transcription-status.json",
+                    manifest_path,
                     code="TRANSCRIPTION_FAILED",
                     message="Local Whisper failed before transcription completed.",
                     source=str(source_path),
@@ -178,7 +186,8 @@ def main() -> int:
     stem = source_path.stem
     json_path = temp_dir / f"{stem}.transcript.json"
     txt_path = temp_dir / f"{stem}.transcript.txt"
-    manifest_path = manifest_hint or temp_dir / f"{stem}.transcription-status.json"
+    manifest_path = default_manifest_path if manifest_hint else temp_dir / f"{stem}.transcription-status.json"
+    manifest_path = ensure_within_course_root(manifest_path, course_dirs["root"])
 
     write_model(json_path, transcript)
     txt_path.write_text(transcript.text, encoding="utf-8")

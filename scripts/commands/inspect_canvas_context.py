@@ -6,7 +6,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from _common import overlap_score, read_text_any
+from _common import ensure_course_dirs, ensure_within_course_root, overlap_score, read_text_any
 from _errors import make_error, write_model, write_validation_error
 from _schemas import CanvasContextPayload, InspectCanvasContextRequest
 
@@ -122,19 +122,26 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Parse Canvas page artifacts into structured context.")
     parser.add_argument("--course-title", required=True)
     parser.add_argument("--lesson-title")
+    parser.add_argument("--base-dir", default=".")
     parser.add_argument("--input", dest="input_paths", action="append", required=True, help="Path to Canvas HTML, JSON, or text export.")
-    parser.add_argument("--output", required=True, help="Path to the structured JSON output.")
+    parser.add_argument("--output", help="Optional path to the structured JSON output.")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    output_path = Path(args.output).expanduser().resolve()
     try:
         request = InspectCanvasContextRequest.model_validate(vars(args))
     except ValidationError as exc:
-        write_validation_error(output_path, exc)
         return 1
+
+    course_dirs = ensure_course_dirs(request.base_dir, request.course_title)
+    output_path = (
+        Path(request.output).expanduser().resolve()
+        if request.output
+        else course_dirs["temp"] / "canvas-context.json"
+    )
+    output_path = ensure_within_course_root(output_path, course_dirs["root"])
 
     sources = [Path(item).expanduser().resolve() for item in request.input_paths]
     missing = [str(path) for path in sources if not path.exists()]

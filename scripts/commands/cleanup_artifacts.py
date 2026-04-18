@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from _common import TEMP_DIRNAME, safe_delete
+from _common import TEMP_DIRNAME, ensure_within_course_root, safe_delete
 from _errors import write_error_manifest, write_manifest, write_validation_error
 from _schemas import CleanupRequest
 
@@ -30,7 +30,10 @@ def main() -> int:
         return 1
 
     course_root = Path(request.course_root).expanduser().resolve()
-    manifest_path = manifest_hint or course_root / TEMP_DIRNAME / "cleanup-manifest.json"
+    manifest_path = ensure_within_course_root(
+        manifest_hint or course_root / TEMP_DIRNAME / "cleanup-manifest.json",
+        course_root,
+    )
     targets = [Path(item).expanduser().resolve() for item in request.path]
     for target in targets:
         if course_root not in target.parents and target != course_root:

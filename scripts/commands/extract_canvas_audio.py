@@ -8,7 +8,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from _common import detect_ffmpeg, ensure_course_dirs, looks_like_audio, looks_like_video
+from _common import detect_ffmpeg, ensure_course_dirs, ensure_within_course_root, looks_like_audio, looks_like_video
 from _errors import write_error_manifest, write_manifest, write_validation_error
 from _schemas import ExtractCanvasAudioRequest
 
@@ -44,7 +44,10 @@ def main() -> int:
     audio_dir = course_dirs["audio"]
     temp_dir = course_dirs["temp"]
     ffmpeg_path = detect_ffmpeg(request.ffmpeg_path)
-    manifest_path = manifest_hint or temp_dir / "audio-extraction.json"
+    manifest_path = ensure_within_course_root(
+        manifest_hint or temp_dir / "audio-extraction.json",
+        course_dirs["root"],
+    )
 
     parsed = urllib.parse.urlparse(request.source)
     if parsed.scheme in {"http", "https"}:

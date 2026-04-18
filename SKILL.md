@@ -135,9 +135,9 @@ When the user does not specify an output directory, create a course folder under
 
 - `笔记`
 - `音频`
-- `其他临时文件`
+- `临时文件`
 
-Place the Markdown master copy in `笔记`. Place extracted audio in `音频`. Place transcripts, screenshots, formula images, and temporary render assets in `其他临时文件` unless a command needs them elsewhere.
+Place the Markdown master copy and exported `.docx` / `.pdf` files in `笔记`. Place extracted audio in `音频`. Place JSON metadata, transcripts, manifests, Canvas context JSON, formula images, screenshots, and other temporary render assets in `临时文件`.
 
 ## Safety
 

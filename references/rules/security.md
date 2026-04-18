@@ -21,7 +21,9 @@ Read [`capability-boundaries.md`](./capability-boundaries.md) for operational li
 ## File Storage
 
 - Write generated files only to a user-specified directory or to a course folder under the current working directory.
-- Keep notes, audio, and temporary artifacts in separate subfolders.
+- Keep all generated files inside the course-named folder.
+- Use separate subfolders for `笔记`, `音频`, and `临时文件`.
+- Store JSON metadata, transcripts, manifests, and other JSON artifacts inside `临时文件`.
 - Ask before deleting intermediate files.
 
 ## Sensitive Content

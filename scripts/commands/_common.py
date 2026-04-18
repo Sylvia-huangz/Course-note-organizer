@@ -13,7 +13,7 @@ from typing import Any
 
 NOTE_DIRNAME = "\u7b14\u8bb0"
 AUDIO_DIRNAME = "\u97f3\u9891"
-TEMP_DIRNAME = "\u5176\u4ed6\u4e34\u65f6\u6587\u4ef6"
+TEMP_DIRNAME = "\u4e34\u65f6\u6587\u4ef6"
 
 
 class _HTMLStripper(HTMLParser):
@@ -82,6 +82,24 @@ def ensure_course_dirs(base_dir: str | Path, course_title: str) -> dict[str, Pat
     for item in (root, notes, audio, temp):
         item.mkdir(parents=True, exist_ok=True)
     return {"root": root, "notes": notes, "audio": audio, "temp": temp}
+
+
+def ensure_within_course_root(path: Path, course_root: Path) -> Path:
+    resolved = path.expanduser().resolve()
+    if resolved != course_root and course_root not in resolved.parents:
+        raise ValueError(f"Artifact path must stay inside the course root: {resolved}")
+    return resolved
+
+
+def infer_course_root_from_artifact(path: Path) -> Path:
+    resolved = path.expanduser().resolve()
+    for candidate in (resolved.parent, *resolved.parents):
+        if candidate.name in {NOTE_DIRNAME, AUDIO_DIRNAME, TEMP_DIRNAME}:
+            return candidate.parent.resolve()
+    raise ValueError(
+        f"Could not infer the course root from artifact path: {resolved}. "
+        f"Expected the path to be inside {NOTE_DIRNAME}, {AUDIO_DIRNAME}, or {TEMP_DIRNAME}."
+    )
 
 
 def write_json(path: Path, payload: Any) -> Path:
