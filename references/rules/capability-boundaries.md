@@ -100,6 +100,24 @@ Cannot do:
 - repair inaccessible Canvas content by themselves
 - delete user files outside the managed course directory
 
+### `pipeline.py` and AI pipeline modules
+
+Can do:
+
+- chunk raw transcript into teaching units by timestamp gaps, slide transitions, and transition phrases
+- clean spoken transcription noise via LLM (removes fillers, fixes errors, preserves meaning)
+- extract teacher emphasis signals via multi-signal fusion + LLM
+- align timestamped screenshots to teaching chunks
+- run global cross-chunk consistency review
+- operate in `--skip-llm` deterministic mode without any API calls
+
+Cannot do:
+
+- call LLM APIs without a valid `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` in the environment
+- guarantee extraction quality when transcript is severely corrupted or missing timestamps
+- replace human review for high-stakes exam content
+- modify Canvas state or access protected course pages
+
 ## Agent Decision Rules
 
 When uncertain, prefer this order:

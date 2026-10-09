@@ -78,6 +78,15 @@ class ExampleSpec(BaseModel):
     content: str = ""
 
 
+class VisualAsset(BaseModel):
+    """A screenshot or image captured from lecture video — board work, slide, diagram, etc."""
+
+    type: Literal["board", "slide", "diagram", "screenshot"] = "board"
+    path: str = ""
+    caption: str = ""
+    alt_text: str = ""
+
+
 class NoteSection(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -91,6 +100,10 @@ class NoteSection(BaseModel):
     repair_annotations: list[RepairAnnotation] = Field(default_factory=list)
     examples: list[ExampleSpec] = Field(default_factory=list)
     question: str | None = None
+    # --- dual-column-teaching-aid fields ---
+    teacher_narrative: str = ""
+    visuals: list[VisualAsset] = Field(default_factory=list)
+    emphasis_points: list[str] = Field(default_factory=list)
 
 
 class CanvasContextNote(BaseModel):

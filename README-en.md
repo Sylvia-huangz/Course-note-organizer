@@ -59,6 +59,15 @@ course-note-organizer/
 |       |-- timestamp-index.md
 |       `-- transcription-options.md
 `-- scripts/
+    |-- ai_pipeline/
+    |   |-- pipeline.py
+    |   |-- chunker.py
+    |   |-- narrative.py
+    |   |-- emphasis.py
+    |   |-- visual_align.py
+    |   |-- global_review.py
+    |   |-- _llm.py
+    |   `-- prompts/
     `-- commands/
         |-- assemble_notes.py
         |-- cleanup_artifacts.py
@@ -92,6 +101,7 @@ course-note-organizer/
 | `export_pdf.py` | Export Markdown notes to PDF |
 | `cleanup_artifacts.py` | Preview or delete course-local temporary artifacts after confirmation |
 | `orchestrate_course_notes.py` | Run the assembly and export flow through one stable entry point |
+| `pipeline.py` | AI pipeline: auto-generate structured note JSON from raw transcript + screenshots (5-phase: chunk → clean → extract emphasis → align visuals → global review) |
 
 ## Rule System
 

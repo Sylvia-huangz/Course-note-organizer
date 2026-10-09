@@ -60,6 +60,9 @@ Use the commands in [`scripts/commands`](./scripts/commands) as task-focused bui
   - Preview or delete temporary audio, transcript, and screenshot artifacts after the user confirms cleanup.
 - `orchestrate_course_notes.py`
   - Run the assembly and export steps behind one stable entry point.
+- `pipeline.py`
+  - Run the AI pipeline to auto-generate a structured note spec (NoteSpec JSON) from raw transcript text and timestamped screenshots. The pipeline runs 5 phases: chunk → narrative cleaning → emphasis extraction → visual alignment → global review. Accepts `--provider anthropic|openai` and `--skip-llm` for deterministic-only mode. Output feeds directly into `assemble_notes.py`.
+  - From the repository root, invoke it with `python -m scripts.ai_pipeline.pipeline`.
 
 Before using a command, check [`references/rules/capability-boundaries.md`](./references/rules/capability-boundaries.md) so the agent does not assume login access, silent uploads, or unsupported video extraction paths.
 

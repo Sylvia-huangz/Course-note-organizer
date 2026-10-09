@@ -22,6 +22,11 @@ Capture this value only when the user explicitly asks for this capability:
    - Do not ask this just because slide assets, screenshots, or PPT files are present.
    - Do not ask this by default when the task is just lecture-note assembly.
 
+2. `use_ai_pipeline`
+   - Ask this only when the user has provided raw transcript text (SRT/VTT/TXT) and wants automatic note generation.
+   - If yes, run `pipeline.py` to generate the NoteSpec JSON before assembly.
+   - Default to manual NoteSpec construction when the user provides structured input directly.
+
 ## Default Behavior
 
 - If `note_style` is not provided, default to `standard-structured`.

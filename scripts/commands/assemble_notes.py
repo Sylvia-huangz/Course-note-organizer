@@ -33,6 +33,10 @@ def _extract_keywords(spec: dict[str, Any]) -> list[str]:
     for section in spec.get("sections", []):
         candidates.extend(re.findall(r"[A-Za-z0-9\u4e00-\u9fff]{2,}", section.get("title", "")))
         candidates.extend(section.get("keywords", []))
+        # Also pull from dual-column fields
+        candidates.extend(re.findall(r"[A-Za-z0-9\u4e00-\u9fff]{2,}", section.get("teacher_narrative", "")))
+        for visual in section.get("visuals", []):
+            candidates.extend(re.findall(r"[A-Za-z0-9\u4e00-\u9fff]{2,}", visual.get("caption", "")))
     for item in spec.get("video_topic_index", []):
         candidates.extend(re.findall(r"[A-Za-z0-9\u4e00-\u9fff]{2,}", item.get("topic", "")))
     filtered = []
@@ -180,6 +184,126 @@ def render_outline_section(section: dict[str, Any]) -> list[str]:
     return lines
 
 
+def render_visual_assets(visuals: list[dict[str, Any]]) -> list[str]:
+    """Render board/slide screenshots with captions for the dual-column left panel."""
+    if not visuals:
+        return []
+    lines: list[str] = []
+    lines.append("**📊 板书 / 课件**")
+    lines.append("")
+    for idx, asset in enumerate(visuals, start=1):
+        asset_type = asset.get("type", "board")
+        type_label = {"board": "板书", "slide": "课件", "diagram": "示意图", "screenshot": "截图"}.get(asset_type, "图示")
+        path = asset.get("path", "")
+        caption = asset.get("caption", "")
+        alt_text = asset.get("alt_text") or caption or f"{type_label} #{idx}"
+        lines.append("")
+        if path:
+            lines.append(f"![{alt_text}]({path})")
+        else:
+            lines.append(f"> 📷 *[{type_label} 待嵌入]*")
+        if caption:
+            lines.append(f"*{caption}*")
+        else:
+            lines.append(f"*{type_label} #{idx}*")
+        lines.append("")
+    return lines
+
+
+def render_dual_column_section(section: dict[str, Any]) -> list[str]:
+    """Render a teaching unit as a two-column HTML table.
+
+    Left column (60%): teacher's verbal explanation + board/slide visuals.
+    Right column (40%): key emphasis points.
+    """
+    title = f"{section.get('section_ref', '').strip()} {section.get('title', '').strip()}".strip()
+    lines: list[str] = [f"## {title}", ""]
+
+    # Source trace and repair annotations (above the table, shared)
+    sources = section.get("sources") or []
+    if sources:
+        lines.append(f"**Source Trace:** {', '.join(sources)}")
+        lines.append("")
+
+    for note in section.get("repair_annotations") or []:
+        lines.append(f"> [Repair: {note.get('type', 'context-assisted')}] {note.get('note', '').strip()}")
+        lines.append("")
+
+    # Build left-column content
+    left_lines: list[str] = []
+    left_lines.append("**🎙️ 老师讲解**")
+    left_lines.append("")
+
+    narrative = section.get("teacher_narrative") or section.get("content", "")
+    if narrative.strip():
+        left_lines.append(narrative.strip())
+        left_lines.append("")
+
+    visuals = section.get("visuals") or []
+    left_lines.extend(render_visual_assets(visuals))
+
+    # Build right-column content
+    right_lines: list[str] = []
+    right_lines.append("**⭐ 重点强调**")
+    right_lines.append("")
+
+    emphasis = section.get("emphasis_points") or section.get("key_points") or []
+    if emphasis:
+        for point in emphasis:
+            right_lines.append(f"- {point}")
+        right_lines.append("")
+
+    # Pitfalls go in right column too
+    pitfalls = section.get("pitfalls") or []
+    if pitfalls:
+        right_lines.append("**⚠️ 易错提醒**")
+        right_lines.append("")
+        for pitfall in pitfalls:
+            right_lines.append(f"- {pitfall}")
+        right_lines.append("")
+
+    # If nothing in right column, add placeholder
+    if not emphasis and not pitfalls:
+        keywords = section.get("keywords") or []
+        if keywords:
+            right_lines.append("**关键词**")
+            right_lines.append("")
+            right_lines.append("、".join(keywords))
+            right_lines.append("")
+
+    # Assemble the two-column table
+    lines.append('<table class="dual-column">')
+    lines.append("<tr>")
+    lines.append('<td width="60%" style="vertical-align:top;padding-right:16px;">')
+    lines.append("")
+    lines.extend(left_lines)
+    lines.append("")
+    lines.append("</td>")
+    lines.append('<td width="40%" style="vertical-align:top;padding-left:8px;">')
+    lines.append("")
+    lines.extend(right_lines)
+    lines.append("")
+    lines.append("</td>")
+    lines.append("</tr>")
+    lines.append("</table>")
+    lines.append("")
+
+    # Examples still rendered below the table (full-width)
+    for example in section.get("examples") or []:
+        lines.append(f"### Example: {example.get('title', 'Worked example')}")
+        lines.append("")
+        lines.append(example.get("content", "").strip())
+        lines.append("")
+
+    # Question at the bottom
+    question = section.get("question")
+    if question:
+        lines.append(f"> 💡 **Review Question:** {question}")
+        lines.append("")
+
+    return lines
+
+
 def render_section(section: dict[str, Any], style: str) -> list[str]:
     if style == "cornell":
         return render_cornell_section(section)
@@ -187,6 +311,8 @@ def render_section(section: dict[str, Any], style: str) -> list[str]:
         return render_qa_section(section)
     if style == "outline-map":
         return render_outline_section(section)
+    if style == "dual-column-teaching-aid":
+        return render_dual_column_section(section)
     return render_standard_section(section)
 
 

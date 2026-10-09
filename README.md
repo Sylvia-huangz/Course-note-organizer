@@ -63,6 +63,15 @@ course-note-organizer/
 |       |-- timestamp-index.md
 |       `-- transcription-options.md
 `-- scripts/
+    |-- ai_pipeline/
+    |   |-- pipeline.py
+    |   |-- chunker.py
+    |   |-- narrative.py
+    |   |-- emphasis.py
+    |   |-- visual_align.py
+    |   |-- global_review.py
+    |   |-- _llm.py
+    |   `-- prompts/
     `-- commands/
         |-- assemble_notes.py
         |-- cleanup_artifacts.py
@@ -96,6 +105,7 @@ course-note-organizer/
 | `export_pdf.py` | 将 Markdown 笔记导出为 PDF |
 | `cleanup_artifacts.py` | 预览或删除课程目录下的临时文件 |
 | `orchestrate_course_notes.py` | 统一调度组装和导出流程的主入口 |
+| `pipeline.py` | AI 流水线：从原始字幕/截图自动生成结构化笔记 JSON（5 阶段：分块→清洗→重点提取→视觉对齐→全局汇总） |
 
 ## 规则层设计
 
